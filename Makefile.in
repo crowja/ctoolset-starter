@@ -1,0 +1,124 @@
+.POSIX:
+.SUFFIXES:
+.SUFFIXES:
+
+SHELL = /bin/sh
+
+SRC_DIR      = ./src
+M4_DIR       = ./m4
+T_DIR        = ./t
+BUILD_DIR    = ./build
+
+CC           = gcc
+CPPFLAGS     = @CPPFLAGS@ @DEFS@ -I$(SRC_DIR)
+##GCC_SANITIZE_FLAGS = -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+GCC_SANITIZE_FLAGS =
+CFLAGS       = -std=c99 -pedantic -Wall $(GCC_SANITIZE_FLAGS) @OPENMP_CFLAGS@
+LDFLAGS      = @LDFLAGS@ $(GCC_SANITIZE_FLAGS)
+LDLIBS       = @LIBS@
+TARNAME      = @PACKAGE_TARNAME@-@PACKAGE_VERSION@
+
+MKDIR_P      = /bin/mkdir -p
+CP           = /bin/cp
+RM           = /bin/rm -f
+
+.PHONY: all clean check dirs install tarball
+
+all: dirs $(BUILD_DIR)/a.out
+
+check:
+	@echo "TODO"
+
+dirs:
+	@$(MKDIR_P) $(BUILD_DIR)
+
+install: $(BUILD_DIR)/a.out
+	@ $(MKDIR_P) @prefix@/bin && $(CP) $(BUILD_DIR)/a.out @prefix@/bin
+
+$(BUILD_DIR)/a.out: $(BUILD_DIR)/linewrapper.o
+$(BUILD_DIR)/a.out: $(BUILD_DIR)/main.o
+$(BUILD_DIR)/a.out: $(BUILD_DIR)/varstr.o
+$(BUILD_DIR)/a.out: $(BUILD_DIR)/XXX-main.o
+$(BUILD_DIR)/a.out: $(BUILD_DIR)/XXX-options.o
+$(BUILD_DIR)/a.out: 
+	$(CC) -o $(BUILD_DIR)/a.out \
+		$(BUILD_DIR)/linewrapper.o \
+		$(BUILD_DIR)/main.o \
+		$(BUILD_DIR)/varstr.o \
+		$(BUILD_DIR)/XXX-main.o \
+		$(BUILD_DIR)/XXX-options.o \
+		$(LDFLAGS) $(LDLIBS)
+
+$(BUILD_DIR)/linewrapper.o: $(SRC_DIR)/linewrapper.c $(SRC_DIR)/linewrapper.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $(SRC_DIR)/linewrapper.c
+
+$(BUILD_DIR)/main.o: $(SRC_DIR)/main.c $(SRC_DIR)/main.h $(SRC_DIR)/colormsg.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $(SRC_DIR)/main.c
+
+$(BUILD_DIR)/varstr.o: $(SRC_DIR)/varstr.c $(SRC_DIR)/varstr.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $(SRC_DIR)/varstr.c
+
+$(BUILD_DIR)/XXX-main.o: $(SRC_DIR)/XXX-main.c $(SRC_DIR)/XXX-main.h $(SRC_DIR)/colormsg.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $(SRC_DIR)/XXX-main.c
+
+$(BUILD_DIR)/XXX-options.o: $(SRC_DIR)/XXX-options.c $(SRC_DIR)/XXX-options.h $(SRC_DIR)/colormsg.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $(SRC_DIR)/XXX-options.c
+
+tarball:
+	@if [ -n "@PACKAGE_TARNAME@" ]; then \
+	  echo "Generate default configure script" && \
+	  autoconf && \
+	  rm -rf $(BUILD_DIR)/$(TARNAME) && \
+	  $(MKDIR_P) $(BUILD_DIR)/$(TARNAME) && \
+	  $(MKDIR_P) $(BUILD_DIR)/$(TARNAME)/m4 && \
+	  $(MKDIR_P) $(BUILD_DIR)/$(TARNAME)/src && \
+	  $(MKDIR_P) $(BUILD_DIR)/$(TARNAME)/t && \
+	  echo "Copy distribution files" && \
+	  cp configure configure.ac import.bash Makefile.in MANIFEST NOTES.md README.md \
+	    $(BUILD_DIR)/$(TARNAME) && \
+	  cp $(M4_DIR)/*.m4 $(BUILD_DIR)/$(TARNAME)/m4 && \
+	  cp $(SRC_DIR)/*.[ch] $(BUILD_DIR)/$(TARNAME)/src && \
+	  cp $(T_DIR)/* $(BUILD_DIR)/$(TARNAME)/t && \
+	  echo "Create tarball $(TARNAME).tgz" && \
+	  ( cd $(BUILD_DIR) && tar zcf $(TARNAME).tgz $(TARNAME) ); \
+	fi
+
+clean:
+	$(RM) $(BUILD_DIR)/* && \
+	( cd src && $(MAKE) clean )
+
+# Example of how to template for variables set by configure
+howdy:
+# SQLITE3_CFLAGS    is @SQLITE3_CFLAGS@
+# SQLITE3_LDFLAGS   is @SQLITE3_LDFLAGS@
+# PACKAGE_NAME      is @PACKAGE_NAME@
+# PACKAGE_TARNAME   is @PACKAGE_TARNAME@
+# PACKAGE_VERSION   is @PACKAGE_VERSION@
+# PACKAGE_STRING    is @PACKAGE_STRING@
+# PACKAGE_BUGREPORT is @PACKAGE_BUGREPORT@
+# PACKAGE_URL       is @PACKAGE_URL@
+#
+# builddir          is @builddir@
+# abs_builddir      is @abs_builddir@
+# top_builddir      is @top_builddir@
+# abs_top_builddir  is @abs_top_builddir@
+# 
+# srcdir            is @srcdir@
+# abs_srcdir        is @abs_srcdir@
+# top_srcdir        is @top_srcdir@
+# abs_top_srcdir    is @abs_top_srcdir@
+#
+# CFLAGS            is @CFLAGS@
+# DEFS              is @DEFS@
+# LDFLAGS           is @LDFLAGS@
+# LIBS              is @LIBS@
+#
+# prefix            is @prefix@
+# exec_prefix       is @exec_prefix@
+#
+#                      @OPENMP_CFLAGS@"
+
+distclean:
+	$(MAKE) clean
+	$(RM) -r autom4te.cache  config.status config.log
+
