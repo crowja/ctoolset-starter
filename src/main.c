@@ -41,7 +41,7 @@ is_in_tuple(char *query, ...)
    va_list   ap;
    char     *s;
 
-   if (query == NULL || query[0] == '\0')
+   if (IS_NULL(query) || query[0] == '\0')
       return 0;
 
    va_start(ap, query);
